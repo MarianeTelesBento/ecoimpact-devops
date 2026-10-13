@@ -1,0 +1,266 @@
+
+> ecoimpact-esg@1.0.0 demo
+> node src/ecoimpact_mongodb_script.js
+
+Conectado ao MongoDB.
+Banco de dados: ecoimpact
+
+======================================================================
+1. CRIACAO DAS 5 COLLECTIONS
+======================================================================
+db.createCollection("categorias_emissao")  -> OK
+db.createCollection("registros_emissao")  -> OK
+db.createCollection("metas_sustentabilidade")  -> OK
+db.createCollection("compensacoes_carbono")  -> OK
+db.createCollection("usuarios_esg")  -> OK
+
+Indice unico criado em metas_sustentabilidade (id_usuario, ano_mes) - equivalente a UK_META_USUARIO_MES.
+
+Collections existentes no banco:
+  - categorias_emissao
+  - registros_emissao
+  - metas_sustentabilidade
+  - compensacoes_carbono
+  - usuarios_esg
+
+======================================================================
+2. OPERACOES DE CREATE (insertMany) - carga inicial
+======================================================================
+usuarios_esg: 11 documentos inseridos
+categorias_emissao: 11 documentos inseridos
+registros_emissao: 12 documentos inseridos
+metas_sustentabilidade: 11 documentos inseridos
+compensacoes_carbono: 11 documentos inseridos
+metas_sustentabilidade: totais recalculados após compensações (equivalente à TRIGGER 3).
+metas_sustentabilidade: alertas gerados como subdocumentos (equivalente à TRIGGER 2 / tabela ALERTA_EMISSAO).
+
+======================================================================
+3. OPERACOES DE READ (find)
+======================================================================
+
+-- 3.1 find: categorias ativas de Escopo 3 --
+[
+  { nome: 'Alimentação - Carne', fator_emissao_kg: 6.6 },
+  { nome: 'Resíduos Orgânicos', fator_emissao_kg: 0.5 },
+  { nome: 'Transporte - Aéreo', fator_emissao_kg: 0.255 },
+  { nome: 'Transporte - Ônibus', fator_emissao_kg: 0.089 },
+  { nome: 'Água - Consumo Residencial', fator_emissao_kg: 0.344 },
+  { nome: 'Resíduos Recicláveis', fator_emissao_kg: 0.05 }
+]
+
+-- 3.2 find: registros de nível ALTO impacto --
+[
+  {
+    id_usuario: 2,
+    categoria: { nome: 'Transporte - Gasolina' },
+    kg_co2e: 84,
+    nivel_impacto: 'ALTO'
+  },
+  {
+    id_usuario: 4,
+    categoria: { nome: 'Alimentação - Carne' },
+    kg_co2e: 66,
+    nivel_impacto: 'ALTO'
+  },
+  {
+    id_usuario: 6,
+    categoria: { nome: 'Transporte - Aéreo' },
+    kg_co2e: 204,
+    nivel_impacto: 'ALTO'
+  },
+  {
+    id_usuario: 10,
+    categoria: { nome: 'Combustível Fóssil - Diesel' },
+    kg_co2e: 80.4,
+    nivel_impacto: 'ALTO'
+  }
+]
+
+-- 3.3 find: metas do mês atual com saldo positivo (emissão líquida) --
+[
+  { id_usuario: 1, saldo_carbono_kg: 0.3, meta_reducao_kg: 100 },
+  { id_usuario: 2, saldo_carbono_kg: 58.51, meta_reducao_kg: 80 },
+  { id_usuario: 4, saldo_carbono_kg: 58, meta_reducao_kg: 60 },
+  { id_usuario: 6, saldo_carbono_kg: 164, meta_reducao_kg: 150 },
+  { id_usuario: 7, saldo_carbono_kg: 0.34, meta_reducao_kg: 40 },
+  { id_usuario: 9, saldo_carbono_kg: 1.128, meta_reducao_kg: 30 },
+  { id_usuario: 10, saldo_carbono_kg: 55.4, meta_reducao_kg: 110 }
+]
+
+-- 3.4 find: metas que possuem ao menos 1 alerta gerado --
+[
+  { id_usuario: 2, alertas: [ [Object] ] },
+  { id_usuario: 4, alertas: [ [Object] ] },
+  { id_usuario: 6, alertas: [ [Object] ] }
+]
+
+-- 3.5 find: compensações com certificação (fonte_certificacao != null) --
+[
+  {
+    id_usuario: 1,
+    tipo_acao: 'Plantio de árvores',
+    fonte_certificacao: 'SOS Mata Atlântica'
+  },
+  {
+    id_usuario: 2,
+    tipo_acao: 'Crédito de carbono',
+    fonte_certificacao: 'VERRA VCS'
+  },
+  {
+    id_usuario: 5,
+    tipo_acao: 'Plantio de árvores',
+    fonte_certificacao: 'Instituto Ecofuturo'
+  },
+  {
+    id_usuario: 1,
+    tipo_acao: 'Crédito de carbono',
+    fonte_certificacao: 'Gold Standard'
+  },
+  {
+    id_usuario: 6,
+    tipo_acao: 'Compra de créditos REDD+',
+    fonte_certificacao: 'VERRA VCS'
+  },
+  {
+    id_usuario: 10,
+    tipo_acao: 'Plantio de árvores',
+    fonte_certificacao: 'Instituto Ecofuturo'
+  },
+  {
+    id_usuario: 3,
+    tipo_acao: 'Crédito de carbono',
+    fonte_certificacao: 'VERRA VCS'
+  }
+]
+
+-- 3.6 find + agregação em JS: total emitido por usuário (equivalente a $group) --
+[
+  { id_usuario: 6, total_kg_co2e: 204, qtd_registros: 1 },
+  { id_usuario: 2, total_kg_co2e: 108.51, qtd_registros: 2 },
+  { id_usuario: 10, total_kg_co2e: 80.4, qtd_registros: 1 },
+  { id_usuario: 4, total_kg_co2e: 66, qtd_registros: 1 },
+  { id_usuario: 1, total_kg_co2e: 30.3, qtd_registros: 2 },
+  { id_usuario: 3, total_kg_co2e: 13.6, qtd_registros: 2 },
+  { id_usuario: 5, total_kg_co2e: 13.5, qtd_registros: 1 },
+  { id_usuario: 7, total_kg_co2e: 5.34, qtd_registros: 1 },
+  { id_usuario: 9, total_kg_co2e: 4.128, qtd_registros: 1 }
+]
+
+-- 3.7 find: usuários com campos extras (schema flexível) --
+[
+  {
+    nome: 'Marina Costa',
+    certificacoes: [ 'GHG Protocol', 'ISO 14001 Lead Auditor' ]
+  }
+]
+
+======================================================================
+4. OPERACOES DE UPDATE
+======================================================================
+
+-- 4.1 updateOne: marcar alertas do usuário 3 como lidos --
+matchedCount: 1 | modifiedCount: 1
+
+-- 4.2 updateOne: corrigir quantidade de um registro (recalculo de kg_co2e e nivel_impacto feito na aplicacao, no lugar da TRIGGER 4) --
+matchedCount: 1 | modifiedCount: 1 | novo kg_co2e: 10.92
+
+-- 4.3 updateMany: desativar categorias de Escopo 1 com fator > 0.25 (combustão fóssil direta mais intensa) --
+matchedCount: 1 | modifiedCount: 1
+
+-- 4.4 updateOne: revisar meta_reducao_kg do usuário 9 (aumento de meta) --
+matchedCount: 1 | modifiedCount: 1
+
+-- 4.5 updateOne: adicionar certificação a usuária que não tinha (schema flexível em ação) --
+matchedCount: 1 | modifiedCount: 1
+
+======================================================================
+5. OPERACOES DE DELETE
+======================================================================
+
+-- 5.1 deleteOne: remover uma compensação lançada em duplicidade --
+deletedCount: 1
+
+-- 5.2 deleteOne: remover categoria descontinuada (diesel) --
+deletedCount: 1
+
+-- 5.3 deleteOne: remover registro de emissão lançado por engano (usuário 4) --
+deletedCount: 1
+metas_sustentabilidade: total_emitido_mes do usuário 4 recalculado após DELETE -> 0
+
+======================================================================
+6. ESTADO FINAL DAS COLLECTIONS
+======================================================================
+categorias_emissao: 10 documentos
+registros_emissao: 11 documentos
+metas_sustentabilidade: 11 documentos
+compensacoes_carbono: 10 documentos
+usuarios_esg: 11 documentos
+
+-- Amostra final: 1 documento completo de cada collection --
+
+[categorias_emissao]
+{
+  "_id": 1,
+  "nome": "Transporte - Gasolina",
+  "descricao": "Veículo particular movido a gasolina",
+  "fator_emissao_kg": 0.21,
+  "unidade_medida": "km",
+  "escopo_ghg": "Escopo 1",
+  "ativo": true,
+  "criado_em": "2026-10-12T19:53:22.428Z"
+}
+
+[registros_emissao]
+{
+  "id_usuario": 1,
+  "categoria": {
+    "id_categoria": 1,
+    "nome": "Transporte - Gasolina",
+    "unidade_medida": "km",
+    "escopo_ghg": "Escopo 1"
+  },
+  "ano_mes": "2026-10",
+  "data_registro": "2026-10-12T19:53:22.430Z",
+  "quantidade": 52,
+  "kg_co2e": 10.92,
+  "nivel_impacto": "MEDIO",
+  "observacao": "Trajeto diário trabalho - gasolina (corrigido: 52 km)",
+  "_id": "6acd3ab23db8b50373fa80ba"
+}
+
+[metas_sustentabilidade]
+{
+  "id_usuario": 1,
+  "ano_mes": "2026-10",
+  "meta_reducao_kg": 100,
+  "total_emitido_mes": 30.3,
+  "total_compensado_kg": 30,
+  "saldo_carbono_kg": 0.3,
+  "alertas": [],
+  "ultima_atualizacao": "2026-10-12T19:53:22.453Z",
+  "_id": "6acd3ab23db8b50373fa80c6"
+}
+
+[compensacoes_carbono]
+{
+  "id_usuario": 1,
+  "tipo_acao": "Plantio de árvores",
+  "kg_compensado": 20,
+  "descricao": "Plantio de 4 mudas nativas",
+  "fonte_certificacao": "SOS Mata Atlântica",
+  "ano_mes": "2026-10",
+  "_id": "6acd3ab23db8b50373fa80d1"
+}
+
+[usuarios_esg]
+{
+  "_id": 1,
+  "nome": "Ana Beatriz Souza",
+  "email": "ana.souza@ecoimpact.com",
+  "cargo": "Analista ESG",
+  "departamento": "Sustentabilidade",
+  "ativo": true,
+  "criado_em": "2025-01-10T00:00:00.000Z"
+}
+
+Execução concluída com sucesso.

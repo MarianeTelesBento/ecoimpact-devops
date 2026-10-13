@@ -1,0 +1,46 @@
+name: ${COMPOSE_PROJECT_NAME:-ecoimpact-local}
+
+services:
+  db:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USER:-ecoimpact}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD (copie .env.example para .env)}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - esg-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  app:
+    image: ${IMAGE:-ecoimpact-esg:local}
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: "3000"
+      APP_ENV: ${APP_ENV:-local}
+      MONGO_URI: mongodb://db:27017
+      MONGO_DB: ${DB_NAME:-ecoimpact}
+      MONGO_USER: ${DB_USER:-ecoimpact}
+      MONGO_PASSWORD: ${DB_PASSWORD}
+      SEED_ON_START: ${SEED_ON_START:-true}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    networks:
+      - esg-net
+
+volumes:
+  mongo_data:
+
+networks:
+  esg-net:
+    driver: bridge
