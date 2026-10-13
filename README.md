@@ -2,7 +2,7 @@
 
 **EcoImpact** é uma solução ESG de monitoramento de emissões de carbono. O modelo original foi desenvolvido em Oracle/PL-SQL (5 tabelas e 4 triggers) e depois migrado para **MongoDB** (5 collections). Neste desafio, o projeto ganhou uma **API REST (Node.js/Express)** sobre o MongoDB e um ciclo DevOps completo: pipeline CI/CD (GitHub Actions), containerização (Docker) e orquestração (Docker Compose) com ambientes de **staging** e **produção**.
 
-**Integrantes:** _[nome completo – RM]_, _[nome completo – RM]_
+**Integrantes:** Luana Carolline Humer Bispo – RM 562101, Mariane Teles Bento – RM 566219, Ricardo Caldas de Mello – RM 565682, Pedro Jaime Fernandes da Cruz Russo – RM 565511
 
 ## Sobre o projeto
 
@@ -166,6 +166,32 @@ Estratégias adotadas:
 - **Variáveis de ambiente:** `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `APP_ENV`, `APP_PORT` e `SEED_ON_START`, lidas do `.env` (local) ou de `env/*.env` (staging/produção). O MongoDB sobe com autenticação, e `DB_PASSWORD` é obrigatória.
 - **Ordem de subida:** `app` só inicia depois que o `db` passa no healthcheck (`depends_on: condition: service_healthy`).
 - **Carga inicial:** com `SEED_ON_START=true`, a API popula as 5 collections na primeira subida (idempotente: não duplica dados).
+
+## Prints do funcionamento
+
+| Evidência                        | Arquivo                                   |
+| -------------------------------- | ----------------------------------------- |
+| Pipeline concluído (visão geral) | `docs/prints/01-pipeline-geral.png`       |
+| Job build e testes               | `docs/prints/02-build-testes.png`         |
+| Imagem publicada no GHCR         | `docs/prints/03-imagem-ghcr.png`          |
+| Deploy staging                   | `docs/prints/04-deploy-staging.png`       |
+| Deploy produção                  | `docs/prints/05-deploy-producao.png`      |
+| Staging funcionando (`:8081`)    | `docs/prints/06-staging-funcionando.png`  |
+| Produção funcionando (`:8082`)   | `docs/prints/07-producao-funcionando.png` |
+
+```markdown
+![Pipeline geral](docs/prints/01-pipeline-geral.png)
+![Build e testes](docs/prints/02-build-testes.png)
+![Imagem no GHCR](docs/prints/03-imagem-ghcr.png)
+![Deploy staging](docs/prints/04-deploy-staging.png)
+![Deploy produção](docs/prints/05-deploy-producao.png)
+![Staging funcionando](docs/prints/06-staging-funcionando.png)
+![Produção funcionando](docs/prints/07-producao-funcionando.png)
+```
+
+Link da execução do pipeline: https://github.com/MarianeTelesBento/ecoimpact-devops/actions/runs/38325822443
+
+Logs de execução já incluídos no projeto: `docs/logs/npm-test-local.log` (15 testes passando) e `docs/logs/script-original-local.log` (execução do script original do EcoImpact).
 
 ## Tecnologias utilizadas
 
